@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kino → eBay Arbitrage</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ctext y=%2713%27 font-size=%2713%27%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>Kinokuniya → eBay Arbitrage</h1>
+  <div id="banner" class="banner hidden"></div>
+</header>
+
+<main>
+  <section class="panel" id="scan-panel">
+    <h2>New scan</h2>
+    <div class="tabs">
+      <button data-mode="keyword" class="tab active">Keyword</button>
+      <button data-mode="url" class="tab">Kinokuniya URL</button>
+      <button data-mode="isbns" class="tab">ISBN list</button>
+    </div>
+    <form id="scan-form">
+      <div class="field mode mode-keyword">
+        <label>Search Kinokuniya for</label>
+        <input name="keyword" placeholder="e.g. chainsaw man, berserk deluxe, one piece box set">
+      </div>
+      <div class="field mode mode-url hidden">
+        <label>Any Kinokuniya listing / category / sale page URL</label>
+        <input name="url" placeholder="https://united-states.kinokuniya.com/products?taxon=…">
+      </div>
+      <div class="field mode mode-isbns hidden">
+        <label>ISBNs (one per line, or comma separated)</label>
+        <textarea name="isbns" rows="5" placeholder="9781974709939&#10;9781974733644"></textarea>
+      </div>
+      <div class="row">
+        <label class="inline"><input type="checkbox" name="member" checked> Apply Privilege Card discount</label>
+        <label class="inline">Max items <input type="number" name="max_items" min="1" max="500" value="40" style="width:5em"></label>
+        <button type="submit" id="go">Scan</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel" id="assumptions">
+    <h2>Assumptions <span class="muted">(edit <code>.env</code> to change)</span></h2>
+    <div id="assumption-list" class="chips"></div>
+  </section>
+
+  <section class="panel" id="scans">
+    <h2>Scans</h2>
+    <ul id="scan-list"></ul>
+  </section>
+
+  <section class="panel" id="results-panel">
+    <div class="results-head">
+      <h2 id="results-title">Results</h2>
+      <div class="progress"><div id="bar"></div></div>
+      <div id="status" class="muted"></div>
+      <div class="filters">
+        <label>Verdict
+          <select id="f-verdict">
+            <option value="">all</option>
+            <option value="buy">buy</option>
+            <option value="maybe">maybe</option>
+            <option value="pass">pass</option>
+            <option value="unknown">unknown</option>
+          </select>
+        </label>
+        <label>Min ROI % <input type="number" id="f-roi" value="0" style="width:5em"></label>
+        <label>Min profit $ <input type="number" id="f-profit" value="" style="width:5em"></label>
+        <label><input type="checkbox" id="f-stock" checked> In stock only</label>
+        <input id="f-text" placeholder="filter title / ISBN">
+        <a id="export" href="#" class="btn">Export CSV</a>
+      </div>
+    </div>
+    <div class="table-wrap">
+    <table id="results">
+      <thead>
+        <tr>
+          <th data-k="verdict">Verdict</th>
+          <th data-k="title">Title</th>
+          <th data-k="kino" class="num">Kino</th>
+          <th data-k="cost" class="num">Your cost</th>
+          <th data-k="target" class="num">Sell @</th>
+          <th data-k="net" class="num">Net</th>
+          <th data-k="roi" class="num">ROI</th>
+          <th data-k="sold" class="num">Sold</th>
+          <th data-k="active" class="num">Active</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="panel" id="watchlist-panel">
+    <h2>Watchlist</h2>
+    <ul id="watchlist"></ul>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
