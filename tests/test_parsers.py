@@ -1,45 +1,54 @@
+import json
 from pathlib import Path
 
 from arbitrage.ebay import parse_browse_response, parse_sold_html
-from arbitrage.kinokuniya import parse_listing, parse_product_page, with_page
+from arbitrage.kinokuniya import handles_from_html, product_from_js, product_from_listing_json, with_page
 
 FX = Path(__file__).parent / "fixtures"
-BASE = "https://united-states.kinokuniya.com"
+BASE = "https://usa.kinokuniya.com"
 
 
-def test_parse_listing_extracts_products():
-    products = {p.isbn: p for p in parse_listing((FX / "kino_listing.html").read_text(), BASE)}
-    assert set(products) == {"9781974709939", "9781974733644", "9781506711980"}
-
-    csm = products["9781974709939"]
-    assert csm.title == "Chainsaw Man, Vol. 1"
-    assert csm.price == 9.99 and csm.sale_price is None
-    assert csm.author == "Tatsuki Fujimoto"
-    assert csm.image == f"{BASE}/images/csm1.jpg"
-    assert csm.url == f"{BASE}/products/9781974709939"
-    assert csm.in_stock
-
-    jjk = products["9781974733644"]
-    assert jjk.price == 12.99 and jjk.sale_price == 8.99
-
-    berserk = products["9781506711980"]
-    assert berserk.price == 49.99
-    assert not berserk.in_stock
+def test_product_from_js():
+    p = product_from_js(json.loads((FX / "shopify_product.json").read_text()), BASE)
+    assert p.isbn == "9781974709939"
+    assert p.handle == "chainsaw-man-vol-1-9781974709939"
+    assert p.title == "Chainsaw Man, Vol. 1"
+    assert p.price == 11.99 and p.sale_price is None
+    assert p.author == "VIZ Media"
+    assert p.image == "https://usa.kinokuniya.com/cdn/shop/files/csm1.jpg"
+    assert p.url == f"{BASE}/products/chainsaw-man-vol-1-9781974709939"
+    assert p.in_stock and p.key == "9781974709939"
 
 
-def test_parse_product_page_prefers_json_ld():
-    p = parse_product_page((FX / "kino_product.html").read_text(), f"{BASE}/products/9781421520544")
-    assert p is not None
-    assert p.isbn == "9781421520544"
-    assert p.title == "Vagabond (VIZBIG Edition), Vol. 1"
-    assert p.price == 19.99
-    assert p.author == "Takehiko Inoue"
-    assert p.image == "https://cdn.example/vag.jpg"
+def test_product_from_js_sale_and_isbn_from_sku():
+    p = product_from_js(json.loads((FX / "shopify_product_sale.json").read_text()), BASE)
+    assert p.price == 49.99 and p.sale_price == 39.99
+    assert p.isbn == "9781506711980"  # pulled from the hyphenated SKU
+    assert not p.in_stock
+    assert p.image == "https://cdn/x.jpg"
+
+
+def test_product_without_isbn_uses_handle_key():
+    p = product_from_js({"handle": "smiski-figure", "title": "Smiski", "price": 1200,
+                         "variants": [{"price": 1200, "available": True, "barcode": "4542202662175"}]}, BASE)
+    assert p.isbn == "" and p.key == "handle:smiski-figure" and p.price == 12.0
+
+
+def test_product_from_listing_json():
+    p = product_from_listing_json({"handle": "h", "title": "T", "vendor": "V",
+                                   "variants": [{"price": "9.99", "compare_at_price": "12.99", "available": True}],
+                                   "images": [{"src": "https://cdn/i.jpg"}]}, BASE)
+    assert p.price == 12.99 and p.sale_price == 9.99 and p.image == "https://cdn/i.jpg"
+
+
+def test_handles_from_html_main_content_only_and_deduped():
+    handles = handles_from_html((FX / "shopify_search.html").read_text())
+    assert handles == ["chainsaw-man-vol-1-9781974709939", "chainsaw-man-vol-2"]
 
 
 def test_with_page():
-    assert with_page(f"{BASE}/products?keyword=x", 3) == f"{BASE}/products?keyword=x&page=3"
-    assert with_page(f"{BASE}/products?keyword=x&page=1", 2) == f"{BASE}/products?keyword=x&page=2"
+    assert with_page(f"{BASE}/search?q=x", 3) == f"{BASE}/search?q=x&page=3"
+    assert with_page(f"{BASE}/search?q=x&page=1", 2) == f"{BASE}/search?q=x&page=2"
 
 
 def test_parse_browse_response():

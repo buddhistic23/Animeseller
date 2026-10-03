@@ -1,6 +1,6 @@
 # Kinokuniya → eBay Arbitrage Scanner
 
-A small self-hosted web app that scrapes [Kinokuniya USA](https://united-states.kinokuniya.com),
+A small self-hosted web app that pulls products from [Kinokuniya USA](https://usa.kinokuniya.com),
 looks up what the same ISBNs are selling for on eBay, subtracts every fee, and tells you
 what's worth flipping.
 
@@ -8,13 +8,16 @@ what's worth flipping.
 
 ## How it works
 
-1. **Find products on Kinokuniya.** Three input modes:
-   - *Keyword* – searches Kinokuniya (`/products?keyword=…`) and walks the result pages.
-   - *URL* – paste any Kinokuniya listing page (a category, a sale/bargain taxon, a series page).
-   - *ISBN list* – paste ISBNs and it fetches each product page directly.
+1. **Find products on Kinokuniya.** usa.kinokuniya.com is a Shopify store, so after finding
+   product handles we read Shopify's JSON (`/products/<handle>.js`) instead of scraping HTML.
+   That gives exact price, sale price, stock status, image, publisher, and the barcode field,
+   which is the ISBN. Three input modes:
+   - *Keyword* – runs the site search and walks the result pages for product handles.
+   - *URL* – paste any usa.kinokuniya.com collection, search, or product URL. Collections use
+     `/collections/<handle>/products.json`.
+   - *ISBN list* – looks each ISBN up through Shopify's predictive search on the barcode field.
 
-   The parser keys off product links (`/products/<ISBN13>`), so it survives most markup changes.
-   It picks up list price, sale price (struck-through price → markdown), author, image and stock status.
+   Items with no ISBN (figures, stickers) are kept and matched on eBay by title instead.
 
 2. **Pull eBay comps for each ISBN.**
    - **Active listings** come from eBay's official Browse API using a GTIN (=ISBN-13) lookup,
@@ -79,14 +82,15 @@ All assumptions live in `.env` and are shown in the UI's "Assumptions" panel:
 | `EBAY_PER_ORDER_FEE` | 0.30 | Per-order fee |
 | `EBAY_SHIP_COST` | 5.00 | What Media Mail + packaging costs you |
 | `BUYER_TAX_RATE` | 0.07 | Buyer sales tax (eBay charges FVF on it) |
-| `REQUEST_DELAY_SECONDS` | 1.5 | Politeness delay between requests |
+| `REQUEST_DELAY_SECONDS` | 1.0 | Politeness delay between requests |
 | `MAX_ITEMS_PER_SCAN` | 60 | Cap per scan |
 
 ## Layout
 
 ```
 arbitrage/
-  kinokuniya.py   scraper + HTML parsers
+  kinokuniya.py   Shopify storefront client (search, collections, product JSON)
+  fetch.py        page fetching with bot-protection fallbacks
   ebay.py         Browse API client + optional sold-listings scraper
   pricing.py      fee / profit / verdict math (pure functions)
   scanner.py      runs a scan in the background, streams results to SQLite
@@ -118,9 +122,8 @@ The app tries two things automatically (`KINO_FETCHER=auto`):
 
 ## Caveats
 
-- Kinokuniya's markup isn't versioned. If a scan returns zero items, open a search page in your
-  browser, save the HTML into `tests/fixtures/`, and adjust `parse_listing` – the tests will
-  guide you.
-- Scraping is rate-limited to one request every 1.5 s. Keep it that way.
+- If a scan returns zero items, open `/api/debug/page?url=<search url>&parse=1` to see which
+  product handles the app found on the page, and adjust `handles_from_html` if the theme changed.
+- Requests are rate-limited to one per second. Keep it that way.
 - Sold-comp scraping of eBay is against their ToS. The Browse API path is fully compliant.
 - "Buy" is a hint, not financial advice. Check sell-through velocity before buying twenty copies.

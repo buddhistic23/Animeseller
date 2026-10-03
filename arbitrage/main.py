@@ -16,7 +16,7 @@ from .config import settings
 from .db import DB
 from .models import ScanRequest
 from .fetch import Fetcher
-from .kinokuniya import parse_listing
+from .kinokuniya import handles_from_html
 from .scanner import describe, normalize_isbns, run_scan
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -148,8 +148,7 @@ async def debug_page(url: str, parse: bool = False):
     async with Fetcher(settings) as f:
         html = await f.get(url)
     if parse:
-        products = parse_listing(html, settings.kino_base_url)
-        return {"url": url, "bytes": len(html), "products": [p.model_dump() for p in products]}
+        return {"url": url, "bytes": len(html), "handles": handles_from_html(html)}
     return PlainTextResponse(
         html, media_type="text/html",
         headers={"Content-Disposition": 'attachment; filename="kinokuniya-page.html"'},

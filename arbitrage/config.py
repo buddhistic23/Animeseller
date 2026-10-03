@@ -37,7 +37,7 @@ class Settings:
     ebay_sold_scrape: bool = field(default_factory=lambda: _b("EBAY_SOLD_SCRAPE"))
 
     kino_base_url: str = field(
-        default_factory=lambda: os.getenv("KINO_BASE_URL", "https://united-states.kinokuniya.com").rstrip("/")
+        default_factory=lambda: os.getenv("KINO_BASE_URL", "https://usa.kinokuniya.com").rstrip("/")
     )
     kino_member_discount: float = field(default_factory=lambda: _f("KINO_MEMBER_DISCOUNT", 0.10))
     kino_sales_tax: float = field(default_factory=lambda: _f("KINO_SALES_TAX", 0.0))
@@ -50,7 +50,7 @@ class Settings:
 
     mock_mode: bool = field(default_factory=lambda: _b("MOCK_MODE"))
     db_path: str = field(default_factory=lambda: os.getenv("DB_PATH", "data/arbitrage.db"))
-    request_delay: float = field(default_factory=lambda: _f("REQUEST_DELAY_SECONDS", 1.5))
+    request_delay: float = field(default_factory=lambda: _f("REQUEST_DELAY_SECONDS", 1.0))
     max_items_per_scan: int = field(default_factory=lambda: _i("MAX_ITEMS_PER_SCAN", 60))
 
     user_agent: str = (

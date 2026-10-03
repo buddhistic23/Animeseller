@@ -144,13 +144,15 @@ class EbayClient:
         listings: list[EbayListing] = []
         if len(isbn) == 13:
             listings = await self._browse({"gtin": isbn, "filter": base_filter, "limit": 50})
-        if not listings:
+        if not listings and isbn:
             listings = await self._browse({"q": isbn, "filter": base_filter, "limit": 50})
+        if not listings and not isbn and title:
+            listings = await self._browse({"q": title[:80], "filter": base_filter, "limit": 50})
         return listings
 
-    async def sold_listings(self, isbn: str) -> list[EbayListing]:
+    async def sold_listings(self, query: str) -> list[EbayListing]:
         assert self._client is not None
-        q = urlencode({"_nkw": isbn, "LH_Sold": 1, "LH_Complete": 1, "LH_ItemCondition": 1000, "_ipg": 60})
+        q = urlencode({"_nkw": query, "LH_Sold": 1, "LH_Complete": 1, "LH_ItemCondition": 1000, "_ipg": 60})
         r = await self._client.get(
             f"https://www.ebay.com/sch/i.html?{q}",
             headers={"User-Agent": self.s.user_agent, "Accept-Language": "en-US,en;q=0.9"},
@@ -159,8 +161,11 @@ class EbayClient:
         return parse_sold_html(r.text)
 
     async def comps(self, isbn: str, title: Optional[str] = None) -> EbayComps:
-        comps = EbayComps(isbn=isbn)
+        comps = EbayComps(isbn=isbn or (title or ""))
         errors = []
+        if not isbn and not title:
+            comps.error = "no ISBN or title to search"
+            return comps
         if self.s.ebay_configured:
             try:
                 comps.active = await self.active_listings(isbn, title)
@@ -170,7 +175,7 @@ class EbayClient:
             errors.append("EBAY_CLIENT_ID/SECRET not set")
         if self.s.ebay_sold_scrape:
             try:
-                comps.sold = await self.sold_listings(isbn)
+                comps.sold = await self.sold_listings(isbn or title or "")
             except Exception as e:  # noqa: BLE001
                 errors.append(f"sold: {e}")
         if errors:

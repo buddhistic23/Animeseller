@@ -6,7 +6,8 @@ from pydantic import BaseModel, Field
 
 
 class KinoProduct(BaseModel):
-    isbn: str
+    isbn: str = ""  # ISBN-13 from the Shopify barcode field; may be empty for merch
+    handle: Optional[str] = None  # Shopify product handle
     title: str
     url: str
     price: float  # list price at Kinokuniya, USD
@@ -18,6 +19,11 @@ class KinoProduct(BaseModel):
     @property
     def effective_price(self) -> float:
         return self.sale_price if self.sale_price is not None else self.price
+
+    @property
+    def key(self) -> str:
+        """Stable id for caching/results: ISBN when we have one, else the handle."""
+        return self.isbn or f"handle:{self.handle or self.url}"
 
 
 class EbayListing(BaseModel):

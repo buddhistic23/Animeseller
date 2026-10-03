@@ -122,7 +122,7 @@ function filtered() {
     (o.verdict === "unknown" || (o.roi_pct ?? -1e9) >= roi) &&
     (prof === "" || (o.net_profit ?? -1e9) >= Number(prof)) &&
     (!stock || o.product.in_stock) &&
-    (!txt || o.product.title.toLowerCase().includes(txt) || o.product.isbn.includes(txt))
+    (!txt || o.product.title.toLowerCase().includes(txt) || (o.product.isbn || "").includes(txt))
   ).sort((a, b) => {
     const x = getters[sortKey](a), y = getters[sortKey](b);
     return (x < y ? -1 : x > y ? 1 : 0) * sortDir;
@@ -141,7 +141,7 @@ function render() {
     <tr class="${p.in_stock ? "" : "oos"}" data-isbn="${p.isbn}">
       <td><span class="badge ${o.verdict}">${o.verdict}</span></td>
       <td class="title"><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.title)}</a>
-        <div class="sub">${esc(p.isbn)}${p.author ? " · " + esc(p.author) : ""}${p.in_stock ? "" : " · OUT OF STOCK"}</div></td>
+        <div class="sub">${esc(p.isbn || "no ISBN")}${p.author ? " · " + esc(p.author) : ""}${p.in_stock ? "" : " · OUT OF STOCK"}</div></td>
       <td class="num">${kino}</td>
       <td class="num">${money(o.cost_basis)}</td>
       <td class="num">${money(o.target_price)}<div class="sub">${o.target_source.replace("_", " ")}</div></td>
@@ -172,7 +172,7 @@ function detail(o) {
   const list = (arr) => arr.length
     ? `<ul>${arr.slice(0, 8).map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${money(l.price)}${l.shipping ? " + " + money(l.shipping) + " ship" : ""}</a> ${esc(l.condition || "")} <span class="sub">${esc(l.title).slice(0, 70)}</span></li>`).join("")}</ul>`
     : `<div class="sub">none</div>`;
-  const ebayQ = `https://www.ebay.com/sch/i.html?_nkw=${p.isbn}&LH_Sold=1&LH_Complete=1`;
+  const ebayQ = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(p.isbn || p.title)}&LH_Sold=1&LH_Complete=1`;
   return `<div class="breakdown">
     <div><b>Cost breakdown</b>
       <ul>

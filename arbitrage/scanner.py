@@ -53,15 +53,15 @@ async def fetch_products(req: ScanRequest, s: Settings) -> list[KinoProduct]:
 
 
 async def fetch_comps(product: KinoProduct, db: DB, ebay: EbayClient | None, s: Settings) -> EbayComps:
-    cached = db.cached_comps(product.isbn)
+    cached = db.cached_comps(product.key)
     if cached:
         return EbayComps.model_validate(cached)
     if s.mock_mode or ebay is None:
-        comps = mock.comps(product.isbn, product.price)
+        comps = mock.comps(product.key, product.price)
     else:
         comps = await ebay.comps(product.isbn, product.title)
     if not comps.error:
-        db.cache_comps(product.isbn, comps.model_dump())
+        db.cache_comps(product.key, comps.model_dump())
     return comps
 
 
@@ -94,9 +94,9 @@ async def run_scan(scan_id: int, req: ScanRequest, db: DB, s: Settings = default
                 comps = await fetch_comps(p, db, ebay, s)
             except Exception as e:  # noqa: BLE001
                 log.exception("ebay comps failed for %s", p.isbn)
-                comps = EbayComps(isbn=p.isbn, error=str(e))
+                comps = EbayComps(isbn=p.key, error=str(e))
             opp = evaluate(p, comps, req.member, s)
-            db.add_result(scan_id, p.isbn, opp.model_dump())
+            db.add_result(scan_id, p.key, opp.model_dump())
             db.update_scan(scan_id, done=i)
             if not s.mock_mode:
                 await asyncio.sleep(s.request_delay)

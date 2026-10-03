@@ -38,7 +38,7 @@ def search(keyword: str, max_items: int) -> list[KinoProduct]:
         sale = round(price * 0.7, 2) if r.random() < 0.25 else None
         isbn = _isbn13(f"{keyword}-{i}")
         out.append(KinoProduct(
-            isbn=isbn, title=t, url=f"https://united-states.kinokuniya.com/products/{isbn}",
+            isbn=isbn, title=t, url=f"https://usa.kinokuniya.com/products/{isbn}",
             price=price, sale_price=sale, image=None, author="Mock Author", in_stock=r.random() > 0.1,
         ))
     return out
@@ -51,7 +51,7 @@ def products(isbns: Iterable[str]) -> list[KinoProduct]:
         price = round(r.choice([9.99, 12.99, 14.99, 24.99, 49.99]), 2)
         out.append(KinoProduct(
             isbn=isbn, title=r.choice(_TITLES).format(n=r.randint(1, 20)),
-            url=f"https://united-states.kinokuniya.com/products/{isbn}", price=price,
+            url=f"https://usa.kinokuniya.com/products/{isbn}", price=price,
         ))
     return out
 
