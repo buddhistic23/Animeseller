@@ -66,3 +66,13 @@ def test_parse_sold_html_skips_placeholder():
     ls = parse_sold_html((FX / "ebay_sold.html").read_text())
     assert [(l.item_id, l.price, l.shipping) for l in ls] == [("111", 14.5, 3.99), ("222", 12.0, 0.0)]
     assert all(l.sold for l in ls)
+
+
+def test_parse_search_html_s_card_layout_and_dedupe():
+    from arbitrage.ebay import parse_search_html
+    ls = parse_search_html((FX / "ebay_scard.html").read_text(), sold=False)
+    assert [(l.item_id, l.price, l.shipping, l.url) for l in ls] == [
+        ("333", 13.25, 0.0, "https://www.ebay.com/itm/333"),
+        ("444", 11.0, 4.5, "https://www.ebay.com/itm/444"),
+    ]
+    assert not any(l.sold for l in ls)

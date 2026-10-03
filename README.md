@@ -22,9 +22,11 @@ what's worth flipping.
 2. **Pull eBay comps for each ISBN.**
    - **Active listings** come from eBay's official Browse API using a GTIN (=ISBN-13) lookup,
      filtered to new-condition, fixed-price, US-located items.
-   - **Sold listings** (the real ground truth) are optionally scraped from eBay's public
-     "Sold items" search. Off by default because eBay's terms of use prohibit scraping; flip
-     `EBAY_SOLD_SCRAPE=1` if you accept that.
+   - **No API keys yet?** Leave them blank and the app reads eBay's public search page for
+     both active and sold listings (`EBAY_SCRAPE=1`, the default). Slower, can get
+     rate-limited, and against eBay's terms of use, so switch to keys when you have them.
+   - **Sold listings** (the real ground truth) come from that same public "Sold items" search.
+     With API keys set, they are off by default; flip `EBAY_SOLD_SCRAPE=1` to add them.
    - Comps are cached in SQLite for 6 hours so re-scans are cheap.
 
 3. **Score each item.**

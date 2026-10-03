@@ -44,6 +44,7 @@ async def get_settings():
         "mock_mode": settings.mock_mode,
         "ebay_configured": settings.ebay_configured,
         "ebay_sold_scrape": settings.ebay_sold_scrape,
+        "ebay_scrape": settings.ebay_scrape,
         "kino_base_url": settings.kino_base_url,
         "kino_member_discount": settings.kino_member_discount,
         "kino_sales_tax": settings.kino_sales_tax,

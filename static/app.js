@@ -34,8 +34,9 @@ async function loadSettings() {
   const banner = $("#banner");
   const msgs = [];
   if (settings.mock_mode) msgs.push("MOCK MODE: showing fake data. Set MOCK_MODE=0 in .env for live scans.");
-  if (!settings.mock_mode && !settings.ebay_configured) msgs.push("eBay API keys not set (EBAY_CLIENT_ID / EBAY_CLIENT_SECRET). Comps will be empty.");
-  if (!settings.mock_mode && !settings.ebay_sold_scrape) msgs.push("Sold comps disabled (EBAY_SOLD_SCRAPE=0); targets use the lowest active listing.");
+  if (!settings.mock_mode && !settings.ebay_configured && settings.ebay_scrape) msgs.push("No eBay API keys: reading eBay's public search page for comps (slower, may rate-limit).");
+  if (!settings.mock_mode && !settings.ebay_configured && !settings.ebay_scrape) msgs.push("eBay API keys not set and EBAY_SCRAPE=0. Comps will be empty.");
+  if (!settings.mock_mode && settings.ebay_configured && !settings.ebay_sold_scrape) msgs.push("Sold comps off (EBAY_SOLD_SCRAPE=0); targets use the lowest active listing.");
   banner.textContent = msgs.join("  ·  ");
   banner.classList.toggle("hidden", msgs.length === 0);
   $("input[name=max_items]").value = Math.min(settings.max_items_per_scan, 40);

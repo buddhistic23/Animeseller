@@ -46,6 +46,8 @@ class Settings:
     ebay_client_secret: str = field(default_factory=lambda: os.getenv("EBAY_CLIENT_SECRET", ""))
     ebay_marketplace_id: str = field(default_factory=lambda: os.getenv("EBAY_MARKETPLACE_ID", "EBAY_US"))
     ebay_sold_scrape: bool = field(default_factory=lambda: _b("EBAY_SOLD_SCRAPE"))
+    # With no API keys, read eBay's public search page for active + sold listings.
+    ebay_scrape: bool = field(default_factory=lambda: _b("EBAY_SCRAPE", True))
 
     kino_base_url: str = field(default_factory=lambda: _kino_base_url())
     kino_member_discount: float = field(default_factory=lambda: _f("KINO_MEMBER_DISCOUNT", 0.10))
