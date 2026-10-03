@@ -73,9 +73,8 @@ async def run_scan(scan_id: int, req: ScanRequest, db: DB, s: Settings = default
         log.exception("kinokuniya fetch failed")
         msg = str(e)
         if "403" in msg or "blocked" in msg.lower() or "refused" in msg.lower():
-            msg = (f"{msg} — Kinokuniya's bot protection is blocking scans from this machine. "
-                   "Try: pip install curl_cffi (restart the app); if still blocked, "
-                   "pip install playwright && playwright install chromium, then set KINO_FETCHER=browser in .env.")
+            msg = (f"{msg} — bot protection is blocking scans from this machine. "
+                   "Try: pip install playwright (uses your installed Chrome), then set FETCHER=browser in .env.")
         db.update_scan(scan_id, status="error", message=f"Kinokuniya fetch failed: {msg}")
         return
 

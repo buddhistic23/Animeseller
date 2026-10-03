@@ -5,6 +5,7 @@ from arbitrage.fetch import BlockedError, Fetcher, looks_like_challenge
 
 def test_looks_like_challenge():
     assert looks_like_challenge("<html><title>Just a moment...</title>")
+    assert looks_like_challenge("<html><h1>Pardon Our Interruption</h1>")
     assert not looks_like_challenge("<html><title>Kinokuniya</title>")
 
 
@@ -50,8 +51,21 @@ async def test_missing_browser_gives_install_hint(monkeypatch):
         raise ImportError("no playwright")
 
     monkeypatch.setattr(f, "_fetch_browser", browser)
-    with pytest.raises(BlockedError, match="playwright install chromium"):
+    with pytest.raises(BlockedError, match="pip install playwright"):
         await f.get("https://x")
+
+
+@pytest.mark.asyncio
+async def test_error_names_the_refusing_host(monkeypatch):
+    f = Fetcher()
+    f.mode = "curl"
+
+    async def curl(url):
+        raise BlockedError("HTTP 403")
+
+    monkeypatch.setattr(f, "_fetch_curl", curl)
+    with pytest.raises(BlockedError, match="www.ebay.com refused"):
+        await f.get("https://www.ebay.com/sch/i.html")
 
 
 def test_legacy_kino_domain_is_upgraded(monkeypatch):

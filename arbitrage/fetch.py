@@ -1,14 +1,15 @@
-"""Page fetching for Kinokuniya.
+"""Page fetching for Kinokuniya and eBay.
 
-Kinokuniya sits behind bot protection that rejects plain HTTP clients with a
-403 even when the User-Agent looks like a browser, because it fingerprints the
-TLS handshake. So we try, in order:
+Both sites sit behind bot protection that rejects plain HTTP clients with a
+403 even when the User-Agent looks like a browser, because they fingerprint
+the TLS handshake. So we try, in order:
 
-  1. curl_cffi impersonating Chrome's TLS/HTTP2 fingerprint (fast, usually enough)
-  2. A real headless Chromium via Playwright, if installed
-     (pip install playwright && playwright install chromium)
+  1. curl_cffi impersonating Chrome's TLS/HTTP2 fingerprint (fast; enough for Kinokuniya)
+  2. A real headless browser via Playwright, if installed (pip install playwright).
+     It uses the Chrome or Edge already on the machine, or Playwright's own
+     Chromium after `playwright install chromium`.
 
-KINO_FETCHER=auto|curl|browser picks the strategy; auto tries 1 then 2.
+FETCHER=auto|curl|browser picks the strategy; auto tries 1 then 2.
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ import asyncio
 import logging
 import os
 from typing import Optional
+from urllib.parse import urlparse
 
 from .config import Settings, settings as default_settings
 
@@ -38,13 +40,16 @@ class BlockedError(RuntimeError):
 
 def looks_like_challenge(html: str) -> bool:
     h = html[:4000].lower()
-    return any(x in h for x in ("just a moment", "cf-chl", "challenge-platform", "access denied", "attention required"))
+    return any(x in h for x in (
+        "just a moment", "cf-chl", "challenge-platform", "access denied", "attention required",
+        "pardon our interruption", "verify you are a human", "px-captcha", "_incapsula_",
+    ))
 
 
 class Fetcher:
     def __init__(self, s: Settings = default_settings):
         self.s = s
-        self.mode = os.getenv("KINO_FETCHER", "auto").strip().lower()
+        self.mode = (os.getenv("FETCHER") or os.getenv("KINO_FETCHER") or "auto").strip().lower()
         self._curl = None
         self._pw = None
         self._browser = None
@@ -80,10 +85,13 @@ class Fetcher:
 
         if self._browser is None:
             self._pw = await async_playwright().start()
-            exe = os.getenv("CHROMIUM_PATH") or None
-            self._browser = await self._pw.chromium.launch(headless=True, executable_path=exe)
+            self._browser = await self._launch()
             self._ctx = await self._browser.new_context(
                 user_agent=self.s.user_agent, locale="en-US", viewport={"width": 1366, "height": 900},
+            )
+            # Hide the most obvious automation tell.
+            await self._ctx.add_init_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
             )
         page = await self._ctx.new_page()
         try:
@@ -102,8 +110,27 @@ class Fetcher:
         finally:
             await page.close()
 
+    async def _launch(self):
+        """Prefer the user's installed Chrome/Edge (no extra download), then Playwright's Chromium."""
+        args = ["--disable-blink-features=AutomationControlled"]
+        exe = os.getenv("CHROMIUM_PATH") or None
+        attempts = []
+        if exe:
+            attempts.append({"executable_path": exe})
+        attempts += [{"channel": "chrome"}, {"channel": "msedge"}, {}]
+        last: Optional[Exception] = None
+        for opts in attempts:
+            try:
+                return await self._pw.chromium.launch(headless=True, args=args, **opts)
+            except Exception as e:  # noqa: BLE001
+                last = e
+        raise ImportError(
+            "no browser found. Install Google Chrome, or run: playwright install chromium"
+        ) from last
+
     async def get(self, url: str) -> str:
         errors: list[str] = []
+        host = urlparse(url).netloc
         if self.mode in ("auto", "curl"):
             try:
                 return await self._fetch_curl(url)
@@ -112,14 +139,15 @@ class Fetcher:
             except BlockedError as e:
                 errors.append(f"blocked via curl_cffi: {e}")
                 if self.mode == "curl":
-                    raise BlockedError("; ".join(errors)) from e
+                    raise BlockedError(f"{host} refused the request. " + "; ".join(errors)) from e
         if self.mode in ("auto", "browser"):
             try:
                 return await self._fetch_browser(url)
-            except ImportError:
-                errors.append(
-                    "headless browser not installed. Run: pip install playwright && playwright install chromium"
-                )
+            except ImportError as e:
+                if "playwright" in str(e).lower() and "no browser" not in str(e):
+                    errors.append("headless browser not installed. Run: pip install playwright")
+                else:
+                    errors.append(str(e))
             except BlockedError as e:
                 errors.append(f"blocked via browser: {e}")
-        raise BlockedError("Kinokuniya refused the request. " + "; ".join(errors))
+        raise BlockedError(f"{host} refused the request. " + "; ".join(errors))

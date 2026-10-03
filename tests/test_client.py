@@ -69,7 +69,7 @@ def store():
 
 @pytest.fixture
 def client(store, monkeypatch):
-    monkeypatch.setenv("KINO_FETCHER", "curl")
+    monkeypatch.setenv("FETCHER", "curl")
     s = Settings(kino_base_url=store, request_delay=0)
     return KinokuniyaClient(s)
 

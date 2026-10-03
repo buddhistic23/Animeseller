@@ -109,18 +109,20 @@ tests/            parser fixtures, pricing math, API lifecycle
 python -m pytest -q
 ```
 
-## "Kinokuniya fetch failed: 403"
+## "403" / "refused the request"
 
-Kinokuniya's bot protection fingerprints the TLS handshake, so a plain HTTP client gets a 403.
-The app tries two things automatically (`KINO_FETCHER=auto`):
+Kinokuniya and eBay both fingerprint the TLS handshake, so a plain HTTP client gets a 403.
+The app tries two things automatically (`FETCHER=auto`):
 
 1. `curl_cffi`, which impersonates Chrome's network fingerprint. Installed by `requirements.txt`.
-2. A real headless Chromium through Playwright, if that is still blocked. One-time setup:
+   Enough for Kinokuniya; eBay usually still says 403.
+2. A real headless browser through Playwright. One-time setup:
    ```bash
    pip install playwright
-   playwright install chromium
    ```
-   Set `KINO_FETCHER=browser` in `.env` to always use the browser (slower, most reliable).
+   It drives the Google Chrome or Edge already installed on your machine. If you have neither,
+   run `playwright install chromium` once. Set `FETCHER=browser` in `.env` to always use the
+   browser (slower, most reliable).
 
 ## Caveats
 
