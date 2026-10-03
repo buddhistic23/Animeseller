@@ -17,7 +17,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from .config import Settings, settings as default_settings
 from .models import EbayComps, EbayListing

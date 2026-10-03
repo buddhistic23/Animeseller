@@ -14,7 +14,7 @@ from typing import Iterable, Optional
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 
 import httpx
-from selectolax.parser import HTMLParser, Node
+from selectolax.lexbor import LexborHTMLParser as HTMLParser, LexborNode as Node
 
 from .config import Settings, settings as default_settings
 from .models import KinoProduct
