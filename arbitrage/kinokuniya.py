@@ -13,10 +13,10 @@ import re
 from typing import Iterable, Optional
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 
-import httpx
 from selectolax.lexbor import LexborHTMLParser as HTMLParser, LexborNode as Node
 
 from .config import Settings, settings as default_settings
+from .fetch import Fetcher
 from .models import KinoProduct
 
 PRODUCT_LINK_RE = re.compile(r"/products/(\d{13}|\d{10})(?:[/?#]|$)")
@@ -259,22 +259,20 @@ def with_page(url: str, page: int) -> str:
 
 
 class KinokuniyaClient:
-    def __init__(self, s: Settings = default_settings, client: Optional[httpx.AsyncClient] = None):
+    def __init__(self, s: Settings = default_settings, fetcher: Optional[Fetcher] = None):
         self.s = s
-        self._client = client
-        self._own = client is None
+        self._fetcher = fetcher
+        self._own = fetcher is None
 
     async def __aenter__(self):
-        if self._client is None:
-            self._client = httpx.AsyncClient(
-                headers={"User-Agent": self.s.user_agent, "Accept-Language": "en-US,en;q=0.9"},
-                timeout=30, follow_redirects=True,
-            )
+        if self._fetcher is None:
+            self._fetcher = Fetcher(self.s)
+            await self._fetcher.__aenter__()
         return self
 
     async def __aexit__(self, *exc):
-        if self._own and self._client is not None:
-            await self._client.aclose()
+        if self._own and self._fetcher is not None:
+            await self._fetcher.__aexit__(*exc)
 
     def search_url(self, keyword: str) -> str:
         return f"{self.s.kino_base_url}/products?{urlencode({'keyword': keyword})}"
@@ -283,10 +281,8 @@ class KinokuniyaClient:
         return f"{self.s.kino_base_url}/products/{isbn}"
 
     async def _get(self, url: str) -> str:
-        assert self._client is not None
-        r = await self._client.get(url)
-        r.raise_for_status()
-        return r.text
+        assert self._fetcher is not None
+        return await self._fetcher.get(url)
 
     async def listing(self, url: str, max_items: int) -> list[KinoProduct]:
         out: list[KinoProduct] = []
@@ -313,8 +309,10 @@ class KinokuniyaClient:
         url = self.product_url(isbn)
         try:
             html = await self._get(url)
-        except httpx.HTTPStatusError:
-            return None
+        except RuntimeError as e:
+            if "HTTP 404" in str(e):
+                return None
+            raise
         return parse_product_page(html, url)
 
     async def products(self, isbns: Iterable[str]) -> list[KinoProduct]:

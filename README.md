@@ -103,6 +103,19 @@ tests/            parser fixtures, pricing math, API lifecycle
 python -m pytest -q
 ```
 
+## "Kinokuniya fetch failed: 403"
+
+Kinokuniya's bot protection fingerprints the TLS handshake, so a plain HTTP client gets a 403.
+The app tries two things automatically (`KINO_FETCHER=auto`):
+
+1. `curl_cffi`, which impersonates Chrome's network fingerprint. Installed by `requirements.txt`.
+2. A real headless Chromium through Playwright, if that is still blocked. One-time setup:
+   ```bash
+   pip install playwright
+   playwright install chromium
+   ```
+   Set `KINO_FETCHER=browser` in `.env` to always use the browser (slower, most reliable).
+
 ## Caveats
 
 - Kinokuniya's markup isn't versioned. If a scan returns zero items, open a search page in your
