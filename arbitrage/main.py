@@ -8,13 +8,15 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .config import settings
 from .db import DB
 from .models import ScanRequest
+from .fetch import Fetcher
+from .kinokuniya import parse_listing
 from .scanner import describe, normalize_isbns, run_scan
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -135,6 +137,23 @@ async def add_watch(req: WatchRequest):
 async def remove_watch(isbn: str):
     db.unwatch(isbn)
     return {"ok": True}
+
+
+@app.get("/api/debug/page")
+async def debug_page(url: str, parse: bool = False):
+    """Return the raw HTML the scraper sees for a Kinokuniya URL (for fixing the parser),
+    or with ?parse=1 a summary of what the parser extracted from it."""
+    if settings.kino_base_url.split("//")[-1] not in url:
+        raise HTTPException(400, f"URL must be on {settings.kino_base_url}")
+    async with Fetcher(settings) as f:
+        html = await f.get(url)
+    if parse:
+        products = parse_listing(html, settings.kino_base_url)
+        return {"url": url, "bytes": len(html), "products": [p.model_dump() for p in products]}
+    return PlainTextResponse(
+        html, media_type="text/html",
+        headers={"Content-Disposition": 'attachment; filename="kinokuniya-page.html"'},
+    )
 
 
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
