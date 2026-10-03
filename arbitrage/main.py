@@ -62,8 +62,8 @@ async def create_scan(req: ScanRequest):
         if not normalize_isbns(req.isbns):
             raise HTTPException(400, "No valid ISBNs found.")
     elif req.url:
-        if settings.kino_base_url.split("//")[-1] not in req.url:
-            raise HTTPException(400, f"URL must be on {settings.kino_base_url}")
+        if "kinokuniya.com" not in req.url:
+            raise HTTPException(400, "URL must be a usa.kinokuniya.com page")
     elif not (req.keyword and req.keyword.strip()):
         raise HTTPException(400, "Provide a keyword, a Kinokuniya URL, or a list of ISBNs.")
     if req.max_items is not None:
@@ -143,8 +143,8 @@ async def remove_watch(isbn: str):
 async def debug_page(url: str, parse: bool = False):
     """Return the raw HTML the scraper sees for a Kinokuniya URL (for fixing the parser),
     or with ?parse=1 a summary of what the parser extracted from it."""
-    if settings.kino_base_url.split("//")[-1] not in url:
-        raise HTTPException(400, f"URL must be on {settings.kino_base_url}")
+    if "kinokuniya.com" not in url:
+        raise HTTPException(400, "URL must be a usa.kinokuniya.com page")
     async with Fetcher(settings) as f:
         html = await f.get(url)
     if parse:

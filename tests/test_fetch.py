@@ -52,3 +52,11 @@ async def test_missing_browser_gives_install_hint(monkeypatch):
     monkeypatch.setattr(f, "_fetch_browser", browser)
     with pytest.raises(BlockedError, match="playwright install chromium"):
         await f.get("https://x")
+
+
+def test_legacy_kino_domain_is_upgraded(monkeypatch):
+    from arbitrage.config import Settings
+    monkeypatch.setenv("KINO_BASE_URL", "https://united-states.kinokuniya.com")
+    assert Settings().kino_base_url == "https://usa.kinokuniya.com"
+    monkeypatch.setenv("KINO_BASE_URL", "https://usa.kinokuniya.com/")
+    assert Settings().kino_base_url == "https://usa.kinokuniya.com"

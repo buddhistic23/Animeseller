@@ -29,6 +29,17 @@ def _b(name: str, default: bool = False) -> bool:
     return v.strip().lower() in {"1", "true", "yes", "on"}
 
 
+LEGACY_KINO_HOSTS = ("united-states.kinokuniya.com",)
+
+
+def _kino_base_url() -> str:
+    url = (os.getenv("KINO_BASE_URL") or "https://usa.kinokuniya.com").rstrip("/")
+    # The old Kinokuniya USA domain no longer serves search results; silently upgrade.
+    if any(h in url for h in LEGACY_KINO_HOSTS):
+        return "https://usa.kinokuniya.com"
+    return url
+
+
 @dataclass
 class Settings:
     ebay_client_id: str = field(default_factory=lambda: os.getenv("EBAY_CLIENT_ID", ""))
@@ -36,9 +47,7 @@ class Settings:
     ebay_marketplace_id: str = field(default_factory=lambda: os.getenv("EBAY_MARKETPLACE_ID", "EBAY_US"))
     ebay_sold_scrape: bool = field(default_factory=lambda: _b("EBAY_SOLD_SCRAPE"))
 
-    kino_base_url: str = field(
-        default_factory=lambda: os.getenv("KINO_BASE_URL", "https://usa.kinokuniya.com").rstrip("/")
-    )
+    kino_base_url: str = field(default_factory=lambda: _kino_base_url())
     kino_member_discount: float = field(default_factory=lambda: _f("KINO_MEMBER_DISCOUNT", 0.10))
     kino_sales_tax: float = field(default_factory=lambda: _f("KINO_SALES_TAX", 0.0))
     kino_shipping_per_item: float = field(default_factory=lambda: _f("KINO_SHIPPING_PER_ITEM", 0.0))
